@@ -1,0 +1,58 @@
+# settings.yaml
+# Central config for the disease adjacency scorer.
+# Change values here instead of editing Python -- every module reads from
+# this file at runtime.
+
+open_targets:
+  api_url: "https://api.platform.opentargets.org/api/v4/graphql"
+  fetch_size: 200              # how many top-scoring targets to pull per disease
+  max_retries: 3
+  retry_backoff_seconds: 2     # linear backoff unit: sleep(attempt * retry_backoff_seconds) between retries
+  raw_data_dir: "data/raw"
+
+ols:
+  search_url: "https://www.ebi.ac.uk/ols4/api/search"
+  term_base_url: "https://www.ebi.ac.uk/ols4/api/ontologies/efo/terms"  # OLS4 terms-by-IRI endpoint, used by fetch_ot_indirect.py for parents/ancestors lookups
+  auto_accept_threshold: 0.92  # matches below this need human confirmation
+  resolved_cache_path: "data/efo/resolved_diseases.csv"
+  max_retries: 3               # shared by resolve_disease.py and fetch_ot_indirect.py -- both call the OLS4 API
+  retry_backoff_seconds: 2     # linear backoff unit: sleep(attempt * retry_backoff_seconds) between retries
+  direct_relationship_score: 0.67        # ot_indirect_score for a direct EFO parent/child relationship
+  shared_ancestor_score_ceiling: 0.49    # ot_indirect_score when diseases share at least one EFO ancestor but aren't parent/child
+  ancestor_page_size: 200       # OLS4 result page size for parents/ancestors lookups in fetch_ot_indirect.py
+  search_result_rows: 8         # how many OLS4 candidates to request per disease-name search in resolve_disease.py
+  confirmation_candidates: 5    # how many ranked candidates to show for human confirmation when a name doesn't auto-resolve
+
+openfda:
+  api_url: "https://api.fda.gov/drug/event.json"
+  top_ae_count: 50             # top N adverse event terms to pull per drug
+  top_drugs_per_disease: 15    # how many known drugs to query FAERS for
+  retry_backoff_seconds: 2     # linear backoff unit: sleep(attempt * retry_backoff_seconds) between retries
+
+fingerprint:
+  min_target_score: 0.1        # overall association score to count as a "target"
+  min_genetics_score: 0.05     # genetic_association datatype score threshold
+  genetics_datatype_id: "genetic_association"
+  pathway_datatype_id: "affected_pathway"
+
+scoring:
+  weights:
+    # Final weights chosen via sensitivity analysis (see docs/adjacency_definition.md):
+    # target-dominant weighting, since pathway_score and ot_indirect_score were
+    # found to have too little discriminating power across this candidate set
+    # to carry much weight (was target=0.30, pathway=0.20, genetics=0.20,
+    # ot_indirect=0.15, ae=0.15).
+    target_score: 0.55
+    pathway_score: 0.04
+    genetics_score: 0.25
+    ot_indirect_score: 0.01
+    ae_score: 0.15
+
+paths:
+  gold_set: "validation/gold_set.csv"
+  output_scores: "output/adjacency_scores.json"
+  disease_list: "config/diseases.csv"
+
+validation:
+  target_rho: 0.70      # Spearman rho considered "strong" ranking correlation
+  moderate_rho: 0.50    # Spearman rho considered "moderate" ranking correlation

@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "disease-adjacency-scorer"
+version = "0.1.0"
+description = "Scores biological adjacency between disease indications using Open Targets, EFO ontology, and FAERS adverse-event evidence."
+authors = []
+packages = [{ include = "disease_adjacency", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "*"
+pyyaml = "*"
+scipy = "*"
+fastapi = "*"
+uvicorn = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-mock = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,14 @@
+role,disease_name
+anchor,non-small cell lung carcinoma
+candidate,small cell lung carcinoma
+candidate,lung adenocarcinoma
+candidate,squamous cell lung carcinoma
+candidate,head and neck squamous cell carcinoma
+candidate,mesothelioma
+candidate,colorectal carcinoma
+candidate,breast carcinoma
+candidate,pancreatic adenocarcinoma
+candidate,urinary bladder carcinoma
+candidate,ovarian carcinoma
+candidate,thyroid gland carcinoma
+candidate,chronic obstructive pulmonary disease

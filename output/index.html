@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Disease Adjacency Scorer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-2: #1c2128;
+    --surface-hover: #21262d;
+    --border: #30363d;
+    --ink: #e6edf3;
+    --ink-muted: #8b949e;
+    --ink-faint: #5f6773;
+    --accent: #34d1b0;
+    --accent-ink: #04211a;
+    --accent-soft: rgba(52, 209, 176, 0.14);
+    --match: #57d38c;
+    --miss: #e2905a;
+    --danger: #f85149;
+    --danger-soft: rgba(248, 81, 73, 0.12);
+    --dim-target: #34d1b0;
+    --dim-genetics: #7aa2f7;
+    --dim-ae: #e0af68;
+    --dim-pathway: #bb9af7;
+    --dim-ot: #f7768e;
+    --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", "SF Mono", Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); }
+  a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .page { max-width: 68rem; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+
+  /* ---------- Masthead ---------- */
+
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+
+  .masthead-id { display: flex; align-items: center; gap: 0.9rem; }
+
+  .mark { width: 2.5rem; height: 2.5rem; flex: none; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.7rem, 3.6vw, 2.2rem);
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .dek { font-size: 1rem; color: var(--ink-muted); max-width: 44rem; margin: 0; }
+
+  .stat-row { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+  .stat {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.8rem;
+  }
+
+  .stat strong {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1rem;
+    color: var(--accent);
+  }
+
+  .stat span { font-size: 0.75rem; color: var(--ink-muted); }
+
+  .stat-note {
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- Banner ---------- */
+
+  .banner {
+    display: none;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: var(--danger-soft);
+    border: 1px solid var(--danger);
+    border-radius: 6px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 2rem;
+    font-size: 0.88rem;
+  }
+
+  .banner.visible { display: flex; }
+  .banner strong { color: var(--danger); }
+  .banner code {
+    display: block;
+    margin-top: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    background: var(--surface-2);
+    padding: 0.5rem 0.7rem;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  /* ---------- Sections ---------- */
+
+  section { margin-bottom: 2.5rem; }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0;
+  }
+
+  /* ---------- Query panel ---------- */
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+  }
+
+  .field-label {
+    display: block;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+    margin-bottom: 0.55rem;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 0.92rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 5px;
+  }
+
+  input[type="text"]:focus { border-color: var(--accent); outline: none; }
+
+  .candidate-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.4rem 1rem;
+    max-height: 13rem;
+    overflow-y: auto;
+    padding: 0.85rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  .candidate-item {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.88rem;
+    padding: 0.25rem 0;
+  }
+
+  .candidate-item input { accent-color: var(--accent); width: 1rem; height: 1rem; }
+
+  .add-row { display: flex; gap: 0.6rem; margin-top: 0.7rem; }
+  .add-row input { flex: 1; }
+
+  .btn {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.88rem;
+    border-radius: 6px;
+    padding: 0.6rem 1.1rem;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--ink);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .btn:hover { border-color: var(--accent); background: var(--surface-hover); }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .btn.primary:hover { filter: brightness(1.08); }
+
+  .btn-row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+
+  .spinner {
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-top-color: currentColor;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  .btn.loading .spinner { display: inline-block; }
+  .btn.loading .btn-label::after { content: "…"; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+  .status-line {
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+  }
+
+  /* ---------- Results table ---------- */
+
+  .scroll-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; background: var(--surface); }
+
+  th, td { padding: 0.6rem 0.85rem; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+
+  thead th {
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+    background: var(--surface-2);
+    position: sticky;
+    top: 0;
+  }
+
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--surface-hover); }
+  tbody tr.expanded { background: var(--surface-2); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  td.num, th.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .disease-cell { white-space: normal; min-width: 13rem; font-weight: 500; }
+
+  .caret { display: inline-block; margin-right: 0.4rem; transition: transform 0.15s ease; color: var(--ink-faint); }
+  tr.expanded .caret { transform: rotate(90deg); color: var(--accent); }
+
+  .bar-cell { min-width: 11rem; }
+  .stacked-bar {
+    display: flex;
+    height: 0.55rem;
+    width: 100%;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--surface-2);
+  }
+  .stacked-bar span { height: 100%; }
+
+  .legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--ink-muted); margin: 0.75rem 0 0; }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+  .legend-swatch { width: 0.65rem; height: 0.65rem; border-radius: 2px; flex: none; }
+
+  .detail-row td {
+    background: var(--bg);
+    padding: 1.1rem 1.5rem 1.5rem;
+    white-space: normal;
+  }
+
+  .evidence-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .evidence-col h4 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-muted);
+    margin: 0 0 0.55rem;
+    font-weight: 600;
+  }
+
+  .chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    max-height: 9rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .empty-note { color: var(--ink-faint); font-size: 0.82rem; font-style: italic; }
+
+  .placeholder {
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 0.9rem;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+  }
+
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .page { padding: 1.75rem 1rem 3.5rem; }
+    th, td { white-space: normal; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="masthead">
+    <div class="masthead-id">
+      <svg class="mark" viewBox="0 0 64 64" role="img" aria-label="Three overlapping evidence sets">
+        <circle cx="24" cy="26" r="17" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.9"/>
+        <circle cx="40" cy="26" r="17" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.5"/>
+        <circle cx="32" cy="41" r="17" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.9"/>
+      </svg>
+      <div>
+        <span class="eyebrow">Interactive Query</span>
+        <h1>Disease Adjacency Scorer</h1>
+      </div>
+    </div>
+    <p class="dek">Run live adjacency queries against the scoring pipeline, or load the pre-computed 12-disease baseline. Every score traces to the shared genes, pathways, genetic loci, and adverse-event terms that produced it.</p>
+    <div class="stat-row">
+      <div class="stat"><strong>0.6154</strong><span>baseline Spearman ρ</span></div>
+      <div class="stat"><strong>12 / 12</strong><span>baseline candidates scored</span></div>
+      <div class="stat"><strong>5</strong><span>evidence dimensions</span></div>
+      <div class="stat"><strong>2 / 12</strong><span>baseline gold-rank matches</span></div>
+    </div>
+    <p class="stat-note">Baseline stats are from the pre-computed 12-disease gold-set run. Live queries below are scored the same way but aren't automatically checked against the gold set.</p>
+  </header>
+
+  <div class="banner" id="api-banner">
+    <div>
+      <strong>Can't reach the scoring API.</strong>
+      <div>Make sure it's running, then reload this page.</div>
+      <code>poetry run uvicorn disease_adjacency.api:app --reload --port 8000</code>
+    </div>
+  </div>
+
+  <section id="query">
+    <div class="section-head"><h2>Run a query</h2></div>
+    <div class="panel">
+      <div>
+        <label class="field-label" for="anchor-input">Anchor disease</label>
+        <input type="text" id="anchor-input" value="non-small cell lung carcinoma" list="anchor-suggestions">
+        <datalist id="anchor-suggestions"></datalist>
+      </div>
+
+      <div>
+        <label class="field-label">Candidate diseases</label>
+        <div class="candidate-grid" id="candidate-grid">
+          <span class="empty-note">Loading candidate list…</span>
+        </div>
+        <div class="add-row">
+          <input type="text" id="add-candidate-input" placeholder="Add a disease not in the list (resolved live via OLS4)…">
+          <button class="btn" id="add-candidate-btn" type="button">Add</button>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" id="score-btn" type="button">
+          <span class="spinner"></span><span class="btn-label">Score</span>
+        </button>
+        <button class="btn" id="load-results-btn" type="button">Load full baseline results</button>
+        <span class="status-line" id="status-line"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="results">
+    <div class="section-head">
+      <h2 id="results-title">Results</h2>
+      <span class="status-line" id="results-meta"></span>
+    </div>
+    <div id="results-container">
+      <div class="placeholder">Run a query above, or load the full baseline results, to see scored disease pairs here.</div>
+    </div>
+    <div class="legend" id="legend" style="display:none;">
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--dim-target)"></span>target (×0.55)</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--dim-genetics)"></span>genetics (×0.25)</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--dim-ae)"></span>adverse events (×0.15)</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--dim-pathway)"></span>pathway (×0.04)</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--dim-ot)"></span>ot indirect (×0.01)</div>
+    </div>
+  </section>
+
+  <footer>
+    <span>API: <code id="api-base-label">http://localhost:8000</code></span>
+    <span>Data: Open Targets · EFO/OLS4 · openFDA FAERS</span>
+  </footer>
+
+</div>
+
+<script>
+  const API_BASE = "http://localhost:8000";
+
+  // Mirrors config/settings.yaml's scoring.weights -- used only to render
+  // each row's weighted-contribution bar client-side. If settings.yaml's
+  // weights change, update this constant to match.
+  const WEIGHTS = {
+    target_score: 0.55,
+    genetics_score: 0.25,
+    ae_score: 0.15,
+    pathway_score: 0.04,
+    ot_indirect_score: 0.01,
+  };
+
+  const DIM_ORDER = ["target_score", "genetics_score", "ae_score", "pathway_score", "ot_indirect_score"];
+  const DIM_COLOR = {
+    target_score: "var(--dim-target)",
+    genetics_score: "var(--dim-genetics)",
+    ae_score: "var(--dim-ae)",
+    pathway_score: "var(--dim-pathway)",
+    ot_indirect_score: "var(--dim-ot)",
+  };
+  const DIM_LABEL = {
+    target_score: "target",
+    genetics_score: "genetics",
+    ae_score: "ae",
+    pathway_score: "pathway",
+    ot_indirect_score: "ot_indirect",
+  };
+
+  const banner = document.getElementById("api-banner");
+  const statusLine = document.getElementById("status-line");
+  const resultsContainer = document.getElementById("results-container");
+  const resultsTitle = document.getElementById("results-title");
+  const resultsMeta = document.getElementById("results-meta");
+  const legend = document.getElementById("legend");
+  const candidateGrid = document.getElementById("candidate-grid");
+  const anchorInput = document.getElementById("anchor-input");
+  const anchorSuggestions = document.getElementById("anchor-suggestions");
+  const addCandidateInput = document.getElementById("add-candidate-input");
+  const scoreBtn = document.getElementById("score-btn");
+  const loadResultsBtn = document.getElementById("load-results-btn");
+
+  let manualCandidates = [];
+
+  function showBanner(message) {
+    if (message) banner.querySelector("div > div").textContent = message;
+    banner.classList.add("visible");
+  }
+  function hideBanner() { banner.classList.remove("visible"); }
+
+  async function apiFetch(path, options) {
+    try {
+      const res = await fetch(API_BASE + path, options);
+      hideBanner();
+      return res;
+    } catch (err) {
+      showBanner("Can't reach the scoring API. Make sure it's running, then reload this page.");
+      throw err;
+    }
+  }
+
+  function setLoading(isLoading) {
+    scoreBtn.disabled = isLoading;
+    scoreBtn.classList.toggle("loading", isLoading);
+  }
+
+  function selectedCandidates() {
+    const checked = Array.from(candidateGrid.querySelectorAll("input[type=checkbox]:checked")).map(el => el.value);
+    return [...checked, ...manualCandidates];
+  }
+
+  function renderCandidateChip(name) {
+    const item = document.createElement("div");
+    item.className = "candidate-item";
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.textContent = name + " ✕";
+    chip.style.cursor = "pointer";
+    chip.title = "Click to remove";
+    chip.addEventListener("click", () => {
+      manualCandidates = manualCandidates.filter(n => n !== name);
+      item.remove();
+    });
+    item.appendChild(chip);
+    candidateGrid.appendChild(item);
+  }
+
+  async function loadDiseases() {
+    try {
+      const res = await apiFetch("/diseases");
+      if (!res.ok) throw new Error("bad response");
+      const data = await res.json();
+
+      anchorInput.value = data.anchor || anchorInput.value;
+      anchorSuggestions.innerHTML = "";
+      candidateGrid.innerHTML = "";
+
+      const allNames = [data.anchor, ...data.candidates].filter(Boolean);
+      allNames.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        anchorSuggestions.appendChild(opt);
+      });
+
+      data.candidates.forEach(name => {
+        const item = document.createElement("label");
+        item.className = "candidate-item";
+        item.innerHTML = `<input type="checkbox" value="${name}" checked> ${name}`;
+        candidateGrid.appendChild(item);
+      });
+
+      statusLine.textContent = `${data.candidates.length} candidates loaded from config/diseases.csv`;
+    } catch (err) {
+      candidateGrid.innerHTML = '<span class="empty-note">Couldn\'t load candidate list -- check the API is running.</span>';
+    }
+  }
+
+  function componentBar(components) {
+    const segments = DIM_ORDER.map(dim => {
+      const contribution = (components[dim] || 0) * WEIGHTS[dim];
+      const widthPct = Math.max(0, Math.min(100, contribution * 100));
+      return `<span style="width:${widthPct}%; background:${DIM_COLOR[dim]}" title="${DIM_LABEL[dim]}: ${components[dim].toFixed(3)} × ${WEIGHTS[dim]} = ${contribution.toFixed(3)}"></span>`;
+    }).join("");
+    return `<div class="stacked-bar">${segments}</div>`;
+  }
+
+  function chipList(items) {
+    if (!items || items.length === 0) return '<span class="empty-note">none</span>';
+    return `<div class="chip-list">${items.map(i => `<span class="chip">${escapeHtml(i)}</span>`).join("")}</div>`;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function renderResults(records, meta) {
+    legend.style.display = records.length ? "flex" : "none";
+    resultsMeta.textContent = meta || "";
+
+    if (!records.length) {
+      resultsContainer.innerHTML = '<div class="placeholder">No results to show.</div>';
+      return;
+    }
+
+    const rows = records.map((r, i) => {
+      const c = r.components;
+      return `
+        <tr class="result-row" data-index="${i}">
+          <td class="num">${i + 1}</td>
+          <td class="disease-cell"><span class="caret">▸</span>${escapeHtml(r.disease_b)}</td>
+          <td class="num">${r.adjacency_score.toFixed(4)}</td>
+          <td class="num">${c.target_score.toFixed(3)}</td>
+          <td class="num">${c.pathway_score.toFixed(3)}</td>
+          <td class="num">${c.genetics_score.toFixed(3)}</td>
+          <td class="num">${c.ot_indirect_score.toFixed(3)}</td>
+          <td class="num">${c.ae_score.toFixed(3)}</td>
+          <td class="bar-cell">${componentBar(c)}</td>
+        </tr>
+        <tr class="detail-row" data-detail-for="${i}" style="display:none;">
+          <td colspan="9">
+            <div class="evidence-grid">
+              <div class="evidence-col"><h4>Shared targets (${(r.shared_targets || []).length})</h4>${chipList(r.shared_targets)}</div>
+              <div class="evidence-col"><h4>Shared pathways (${(r.shared_pathways || []).length})</h4>${chipList(r.shared_pathways)}</div>
+              <div class="evidence-col"><h4>Shared genetics (${(r.shared_genetics || []).length})</h4>${chipList(r.shared_genetics)}</div>
+              <div class="evidence-col"><h4>Shared adverse events (${(r.shared_adverse_events || []).length})</h4>${chipList(r.shared_adverse_events)}</div>
+            </div>
+          </td>
+        </tr>`;
+    }).join("");
+
+    resultsContainer.innerHTML = `
+      <div class="scroll-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">Rank</th><th>Disease</th><th class="num">adj_score</th>
+              <th class="num">target</th><th class="num">pathway</th><th class="num">genetics</th>
+              <th class="num">ot_indirect</th><th class="num">ae</th><th>Contribution</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+
+    resultsContainer.querySelectorAll("tr.result-row").forEach(row => {
+      row.addEventListener("click", () => {
+        const idx = row.dataset.index;
+        const detail = resultsContainer.querySelector(`tr[data-detail-for="${idx}"]`);
+        const isOpen = detail.style.display !== "none";
+        detail.style.display = isOpen ? "none" : "table-row";
+        row.classList.toggle("expanded", !isOpen);
+      });
+    });
+  }
+
+  async function runScore() {
+    const anchor = anchorInput.value.trim();
+    const candidates = selectedCandidates();
+    if (!anchor || candidates.length === 0) {
+      statusLine.textContent = "Pick an anchor and at least one candidate.";
+      return;
+    }
+
+    setLoading(true);
+    resultsTitle.textContent = "Results";
+    statusLine.textContent = `Scoring ${candidates.length} candidate(s) against ${anchor}…`;
+
+    try {
+      const res = await apiFetch("/score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ anchor, candidates }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        const detail = data.detail || data;
+        statusLine.textContent = `Anchor '${anchor}' didn't resolve: ${(detail.candidates || []).map(c => c.label).join(", ") || "no close matches"}`;
+        renderResults([]);
+        return;
+      }
+
+      let meta = `${data.results.length} scored against ${data.anchor} (${data.anchor_efo_id})`;
+      if (data.errors && data.errors.length) {
+        meta += ` · ${data.errors.length} unresolved: ${data.errors.map(e => e.disease).join(", ")}`;
+      }
+      renderResults(data.results, meta);
+      statusLine.textContent = "Done.";
+    } catch (err) {
+      // apiFetch already surfaced the banner
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadFullResults() {
+    statusLine.textContent = "Loading baseline results…";
+    try {
+      const res = await apiFetch("/results");
+      if (!res.ok) {
+        statusLine.textContent = "No baseline results found -- run the pipeline first.";
+        return;
+      }
+      const records = await res.json();
+      resultsTitle.textContent = "Baseline results (12-disease gold-set run)";
+      renderResults(records, `${records.length} pre-computed records from output/adjacency_scores.json`);
+      statusLine.textContent = "Done.";
+    } catch (err) {
+      // apiFetch already surfaced the banner
+    }
+  }
+
+  scoreBtn.addEventListener("click", runScore);
+  loadResultsBtn.addEventListener("click", loadFullResults);
+  document.getElementById("add-candidate-btn").addEventListener("click", () => {
+    const name = addCandidateInput.value.trim();
+    if (!name) return;
+    if (!manualCandidates.includes(name)) {
+      manualCandidates.push(name);
+      renderCandidateChip(name);
+    }
+    addCandidateInput.value = "";
+  });
+  addCandidateInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("add-candidate-btn").click();
+  });
+
+  loadDiseases();
+</script>
+
+</body>
+</html>

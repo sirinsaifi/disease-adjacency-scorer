@@ -1,0 +1,13 @@
+disease_name,efo_id,expected_rank,reviewer_notes
+small cell lung carcinoma,EFO_0000702,1,Same organ; shares key oncogenic drivers (TP53 KRAS); treated by overlapping drug classes
+lung adenocarcinoma,EFO_0000571,2,NSCLC subtype; highest target/pathway overlap expected (EGFR ALK ROS1)
+squamous cell lung carcinoma,EFO_0000708,3,NSCLC subtype; shares squamous biology and some therapeutic targets
+mesothelioma,EFO_0000588,4,Thoracic malignancy; overlapping VEGF and immune checkpoint biology
+head and neck squamous cell carcinoma,EFO_0000181,5,Shared squamous biology and EGFR pathway; common PD-L1 overlap
+colorectal carcinoma,EFO_0005842,6,Shares KRAS/BRAF/VEGF targets; common checkpoint immunotherapy overlap
+breast carcinoma,EFO_0000305,7,Overlapping PI3K/AKT/mTOR and CDK4/6 biology; some shared GWAS loci
+ovarian carcinoma,EFO_0001075,8,BRCA pathway overlap; similar platinum/taxane treatment profile in AE space
+urinary bladder carcinoma,MONDO_0004986,9,PD-L1/FGFR overlap; checkpoint inhibitor AE profile similarity
+pancreatic adenocarcinoma,EFO_0002618,10,KRAS overlap but poor druggability; limited pathway convergence otherwise
+thyroid gland carcinoma,EFO_0002892,11,Limited mechanistic overlap; mainly VEGFR/BRAF in papillary subtype
+chronic obstructive pulmonary disease,EFO_0000341,12,Same organ (lung) but inflammatory not oncogenic; minimal target overlap expected
