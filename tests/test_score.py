@@ -40,6 +40,54 @@ class TestValidateWeights:
         with pytest.raises(ValueError):
             validate_weights(bad_weights)
 
+    def test_all_five_correct_keys_does_not_raise(self):
+        weights = {
+            "target_score": 0.30,
+            "pathway_score": 0.20,
+            "genetics_score": 0.20,
+            "ot_indirect_score": 0.15,
+            "ae_score": 0.15,
+        }
+        validate_weights(weights)  # should not raise
+
+    def test_only_three_keys_raises_error(self):
+        weights = {
+            "target_score": 0.34,
+            "pathway_score": 0.33,
+            "genetics_score": 0.33,
+        }
+        with pytest.raises(ValueError):
+            validate_weights(weights)
+
+    def test_sum_within_tolerance_band_does_not_raise(self):
+        # validate_weights accepts 0.999 <= sum <= 1.001 (inclusive) as a
+        # floating-point tolerance band, not a strict boundary -- both ends
+        # of that band are valid, not rejected.
+        weights_high_end = {
+            "target_score": 0.301, "pathway_score": 0.20,
+            "genetics_score": 0.20, "ot_indirect_score": 0.15, "ae_score": 0.15,
+        }  # sums to 1.001
+        weights_low_end = {
+            "target_score": 0.299, "pathway_score": 0.20,
+            "genetics_score": 0.20, "ot_indirect_score": 0.15, "ae_score": 0.15,
+        }  # sums to 0.999
+        validate_weights(weights_high_end)  # should not raise
+        validate_weights(weights_low_end)  # should not raise
+
+    def test_sum_outside_tolerance_band_raises_error(self):
+        weights_too_high = {
+            "target_score": 0.302, "pathway_score": 0.20,
+            "genetics_score": 0.20, "ot_indirect_score": 0.15, "ae_score": 0.15,
+        }  # sums to 1.002
+        weights_too_low = {
+            "target_score": 0.298, "pathway_score": 0.20,
+            "genetics_score": 0.20, "ot_indirect_score": 0.15, "ae_score": 0.15,
+        }  # sums to 0.998
+        with pytest.raises(ValueError):
+            validate_weights(weights_too_high)
+        with pytest.raises(ValueError):
+            validate_weights(weights_too_low)
+
 
 class TestComputeAdjacencyScore:
 

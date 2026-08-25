@@ -7,15 +7,15 @@ packages = [{ include = "disease_adjacency", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-requests = "*"
-pyyaml = "*"
-scipy = "*"
-fastapi = "*"
-uvicorn = "*"
+requests = ">=2.28"
+pyyaml = ">=6.0"
+scipy = ">=1.10"
+fastapi = ">=0.100"
+uvicorn = {extras = ["standard"], version = ">=0.22"}
 
 [tool.poetry.group.dev.dependencies]
-pytest = "*"
-pytest-mock = "*"
+pytest = ">=7.0"
+pytest-mock = ">=3.0"
 
 [build-system]
 requires = ["poetry-core"]
